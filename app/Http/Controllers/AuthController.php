@@ -2,26 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use Auth;
-use Hash;
-use Mail;
-use Str;
-use DB;
-use Illuminate\Http\Request;
 use App\Mail\APIResetPassword;
-use App\Pengguna;
-use Datetime;
+use App\Models\Pengguna;
+use DateTime;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
-class AuthController extends Controller
+class AuthController extends Controller implements HasMiddleware
 {
     /**
-     * Create a new AuthController instance.
-     *
-     * @return void
+     * Get the middleware that should be assigned to the controller.
      */
-    public function __construct()
+    public static function middleware(): array
     {
-        $this->middleware('auth:api', ['except' => ['login', 'register', 'sendResetEmail', 'reset']]);
+        return [
+            new Middleware('auth:api', except: ['login', 'register', 'sendResetEmail', 'reset']),
+        ];
     }
 
     public function register(Request $request)
@@ -54,7 +56,8 @@ class AuthController extends Controller
 
         $pengguna =  Pengguna::select('role')->find(request('username'));
 
-        if (! $token = auth()->guard('api')->claims(['role' => $pengguna->role])->attempt($credentials)) {
+        // An unknown username used to end in a 500 here; it now gets the same 401 as a wrong password.
+        if (! $pengguna || ! $token = auth()->guard('api')->claims(['role' => $pengguna->role])->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -131,18 +134,20 @@ class AuthController extends Controller
             $reset = (object) array();
 
             //Generate, the password reset link. The token generated is embedded in the link
-            $reset->link = env('APP_FE_URL') . "/reset/$token";
-            $reset->appName = env('APP_NAME');
-            $reset->appURL = env('APP_FE_URL');
+            $reset->link = config('app.fe_url') . "/reset/$token";
+            $reset->appName = config('app.name');
+            $reset->appURL = config('app.fe_url');
 
-            Mail::to($request->email)->send(new APIResetPassword($reset));
+            // Mail::failures() was removed in Laravel 9: a failed send now throws.
+            try {
+                Mail::to($request->email)->send(new APIResetPassword($reset));
+            } catch (TransportExceptionInterface $e) {
+                report($e);
 
-            // check for failures
-            if(Mail::failures()) {
                 return response()->json(['status' => false, 'message' => 'Failed to send reset link email.']);
-            } else {
-                return response()->json(['status' => true, 'message' => 'Please check you email for reset link.']);
             }
+
+            return response()->json(['status' => true, 'message' => 'Please check you email for reset link.']);
         } else {
             return response()->json(['status' => false, 'message' => 'User not found or email not matched with login ID.']);
         }

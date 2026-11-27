@@ -1,15 +1,16 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
+| Loaded by bootstrap/app.php with the "api" prefix and middleware group.
 |
 */
 
@@ -18,16 +19,16 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 Route::group(['prefix' => 'auth'], function () {
-    Route::post('register', 'AuthController@register');
-    Route::post('requestreset', 'AuthController@sendResetEmail');
-    Route::post('reset', 'AuthController@reset');
-    Route::post('login', 'AuthController@login');
-    Route::post('logout', 'AuthController@logout');
-    Route::post('refresh', 'AuthController@refresh');
-    Route::post('me', 'AuthController@me');
+    Route::post('register', [AuthController::class, 'register']);
+    Route::post('requestreset', [AuthController::class, 'sendResetEmail']);
+    Route::post('reset', [AuthController::class, 'reset']);
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
+    Route::post('me', [AuthController::class, 'me']);
 });
 
 Route::group(['middleware' => ['auth:api']], function () {
-    Route::post('iamadmin', 'HomeController@adminTest')->middleware('role.admin');
-    Route::post('iamuser', 'HomeController@userTest')->middleware('role.user');
+    Route::post('iamadmin', [HomeController::class, 'adminTest'])->middleware('role.admin');
+    Route::post('iamuser', [HomeController::class, 'userTest'])->middleware('role.user');
 });

@@ -1,55 +1,65 @@
 <?php
 
-namespace App;
+namespace App\Models;
 
-use Tymon\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\PenggunaFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class Pengguna extends Authenticatable implements JWTSubject
 {
-    use Notifiable;
+    /** @use HasFactory<PenggunaFactory> */
+    use HasFactory, Notifiable;
 
     // Table Name
-    protected $table = "pengguna";
+    protected $table = 'pengguna';
+
     // Primary Key
     public $primaryKey = 'username';
+
     public $incrementing = false;
+
+    protected $keyType = 'string';
+
     // Timestamps
     public $timestamps = true;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
-        'name', 'username', 'email', 'role', 'password'
+        'name', 'username', 'email', 'role', 'password',
     ];
 
     /**
-     * The attributes that should be hidden for arrays.
+     * The attributes that should be hidden for serialization.
      *
-     * @var array
+     * @var list<string>
      */
     protected $hidden = [
         'password', 'remember_token',
     ];
 
     /**
-     * The attributes that should be cast to native types.
+     * Get the attributes that should be cast.
      *
-     * @var array
+     * @return array<string, string>
      */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+        ];
+    }
 
     // For custom password column name
     public function getAuthPassword()
     {
-      return $this->password;
+        return $this->password;
     }
 
     /**
